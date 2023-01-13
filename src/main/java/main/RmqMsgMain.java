@@ -1,6 +1,7 @@
 package main;
 
 
+import model.file.ProtoFileInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.FileUtil;
@@ -52,7 +53,7 @@ public class RmqMsgMain {
 
         SleepUtil.trySleep(5000);
 
-        umedia.library.common.ReflectionUtil.TypeValuePair typeValuePair = ReflectionUtil.exec("com.uangel.rmq.message.RmqHeader.newBuilder()\n" +
+        ReflectionUtil.TypeValuePair typeValuePair = ReflectionUtil.exec("com.uangel.rmq.message.RmqHeader.newBuilder()\n" +
                 "                .setType(\"HEARTBEAT_REQ\")\n" +
                 "                .setMsgFrom(\"AI_AIWF\")\n" +
                 "                .setReason(\"success\")\n" +

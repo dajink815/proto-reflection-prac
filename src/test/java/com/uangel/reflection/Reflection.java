@@ -2,7 +2,11 @@ package com.uangel.reflection;
 
 
 import com.uangel.protobuf.Message;
+import model.msg.FieldInfo;
+import model.msg.MsgInfo;
+import scenario.phases.SendPhase;
 import util.ReflectionUtil;
+import util.StringUtil;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
@@ -20,6 +24,10 @@ import java.util.stream.Collectors;
 public class Reflection {
 
     private URLClassLoader classLoader;
+    private static final String PKG_BASE = "com.uangel.protobuf.";
+    private static final String PKG_PATH_HEADER = PKG_BASE + "Header";
+    private static final String PKG_PATH_BODY = PKG_BASE + "CallCloseReq";
+    private static final String PKG_PATH_MESSAGE = PKG_BASE + "Message";
 
     public Reflection() {
     }
@@ -123,6 +131,14 @@ public class Reflection {
         return invokeMethodWparam(methodName, obj, parameter, int.class);
     }
 
+    public Object invokeLongMethod(String methodName, Object obj, long parameter) {
+        return invokeMethodWparam(methodName, obj, parameter, long.class);
+    }
+
+    public Object invokeBoolMethod(String methodName, Object obj, boolean parameter) {
+        return invokeMethodWparam(methodName, obj, parameter, boolean.class);
+    }
+
     /**
      * @fn invokeByteMethod
      * @brief invoke method with Byte Array Parameter
@@ -149,6 +165,41 @@ public class Reflection {
         return invokeMethodWparam(methodName, obj, parameter, parameter.getClass());
     }
 
+
+    public Object getNewBuilder(String className) {
+        return invokeMethod(className, "newBuilder");
+    }
+
+    public byte[] toByteArray(Object msgObj) {
+        Object msgByteObj = invokeMethod("toByteArray", msgObj);
+        byte[] msgByteArr = (byte[]) msgByteObj;
+        System.out.println("toByteArray : \r\n" + msgByteArr);
+        return msgByteArr;
+    }
+
+    public Object build(Object builderObj) {
+        return invokeMethod("build", builderObj);
+    }
+
+    public Object parseFrom(String className, byte[] bytes) {
+        return invokeByteMethod(className, "parseFrom", bytes);
+    }
+
+    public String getMethodName(String fieldName) {
+        return "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+    }
+
+    public String getExecResult(String execCmd) throws Exception {
+        if (StringUtil.isNull(execCmd))
+            return null;
+
+        ReflectionUtil.TypeValuePair typeValuePair = ReflectionUtil.exec(execCmd);
+        if (typeValuePair == null || typeValuePair.value == null)
+            return null;
+
+        return typeValuePair.value.toString();
+    }
+
     /**
      * Create Message
      * */
@@ -157,78 +208,74 @@ public class Reflection {
 
         try {
             // get Header.Builder
-            Object hBuilderObj = invokeMethod("com.uangel.protobuf.Header", "newBuilder");
+            Object hBuilder = getNewBuilder(PKG_PATH_HEADER);
 
             // set Header
-            hBuilderObj = invokeObjMethod("setType", hBuilderObj, "CALL_CLOSER_REQ");
+            hBuilder = invokeObjMethod("setType", hBuilder, "CALL_CLOSER_REQ");
 
-            String execCmd = "java.util.UUID.randomUUID().toString()";
-            String value = ReflectionUtil.exec(execCmd).value.toString();
-            hBuilderObj = invokeObjMethod("setTId", hBuilderObj, value);
+            String value = getExecResult("java.util.UUID.randomUUID().toString()");
+            hBuilder = invokeObjMethod("setTId", hBuilder, value);
 
-            hBuilderObj = invokeObjMethod("setMsgFrom", hBuilderObj, "AI_AIWF");
-            hBuilderObj = invokeObjMethod("setReason", hBuilderObj, "success");
-            hBuilderObj = invokeIntMethod("setReasonCode", hBuilderObj, 200);
+            hBuilder = invokeObjMethod("setMsgFrom", hBuilder, "AI_AIWF");
+            hBuilder = invokeObjMethod("setReason", hBuilder, "success");
+            hBuilder = invokeIntMethod("setReasonCode", hBuilder, 200);
 
-            execCmd = "java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern(\"yyyy-MM-dd HH:mm:ss.SSS\"))";
-            value = ReflectionUtil.exec(execCmd).value.toString();
-            hBuilderObj = invokeObjMethod("setTimestamp", hBuilderObj, value);
+            value = getExecResult("java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern(\"yyyy-MM-dd HH:mm:ss.SSS\"))");
+            hBuilder = invokeObjMethod("setTimestamp", hBuilder, value);
 
             // Build Header
-            Object hBuildResultObj = invokeMethod("build", hBuilderObj);
+            Object hMsgResult = build(hBuilder);
 
-            System.out.println("Header Builder Class : " + hBuilderObj.getClass());
-            System.out.println("Header Build Result Class : " + hBuildResultObj.getClass());
-            System.out.println("Header Object : \r\n" + hBuildResultObj);
+            System.out.println("Header Builder Class : " + hBuilder.getClass());
+            System.out.println("Header Msg Result Class : " + hMsgResult.getClass());
+            System.out.println("Header Msg Result : \r\n" + hMsgResult);
 
             System.out.println("===========================================================");
 
             // get Body.Builder
-            Object bBuilderObj = invokeMethod("com.uangel.protobuf.CallCloseReq", "newBuilder");
+            Object bBuilder = getNewBuilder(PKG_PATH_BODY);
 
             // set Body
-            bBuilderObj = invokeObjMethod("setCallId", bBuilderObj, "testCallId");
+            bBuilder = invokeObjMethod("setCallId", bBuilder, "testCallId");
 
             // Build Body
-            Object bBuildResultObj = invokeMethod("build", bBuilderObj);
+            Object bMsgResult = build(bBuilder);
 
-            System.out.println("Body Builder Class : " + bBuilderObj.getClass());
-            System.out.println("Body Build Result Class : " + bBuildResultObj.getClass());
-            System.out.println("Body Object : \r\n" + bBuildResultObj);
+            System.out.println("Body Builder Class : " + bBuilder.getClass());
+            System.out.println("Body Msg Result Class : " + bMsgResult.getClass());
+            System.out.println("Body Msg Result : \r\n" + bMsgResult);
 
             System.out.println("===========================================================");
 
             // get Message.Builder
-            Object msgBuilderObj = invokeMethod("com.uangel.protobuf.Message", "newBuilder");
+            Object msgBuilder = getNewBuilder(PKG_PATH_MESSAGE);
 
             // set Header
-            msgBuilderObj = invokeObjMethod("setHeader", msgBuilderObj, hBuildResultObj);
+            msgBuilder = invokeObjMethod("setHeader", msgBuilder, hMsgResult);
             // set Body
-            msgBuilderObj = invokeObjMethod("setCallCloseReq", msgBuilderObj, bBuildResultObj);
+            msgBuilder = invokeObjMethod("setCallCloseReq", msgBuilder, bMsgResult);
 
             // Build Message
-            Object msgBuildResultObj = invokeMethod("build", msgBuilderObj);
+            Object msgResult = build(msgBuilder);
 
-            System.out.println("Message Builder Class : " + msgBuilderObj.getClass());
-            System.out.println("Message Build Result Class : " + msgBuildResultObj.getClass());
-            System.out.println("Message Object : \r\n" + msgBuildResultObj);
+            System.out.println("Message Builder Class : " + msgBuilder.getClass());
+            System.out.println("Message Result Class : " + msgResult.getClass());
+            System.out.println("Message Result : \r\n" + msgResult);
 
             System.out.println("===========================================================");
             // 1. Object(Message) -> ByteArray -> 전송
-            Object msgByteObj = invokeMethod("toByteArray", msgBuildResultObj);
-            byte[] msgByteArr = (byte[]) msgByteObj;
-            System.out.println("msgByteArr : \r\n" + msgByteArr);
-            System.out.println("newString : \r\n" + new String(msgByteArr));
+            byte[] msgByteArr = toByteArray(msgResult);
 
             // 2. ByteArray -> Message
             // 2-1. Byte Array Reflection (메시지 받았을 때 파싱)
             //Object obj = msgByteArr;        // msgByteObj.equals(obj) : true
-            Object o = invokeByteMethod("com.uangel.protobuf.Message", "parseFrom", msgByteArr);
+            Object o = parseFrom(PKG_PATH_MESSAGE, msgByteArr);
             System.out.println("ByteToObject : \r\n" + o);
             // 2-2. ProtoBuf Class Method (메시지 받은 쪽에서 파싱 잘 되는지 확인)
             Message msg = Message.parseFrom(msgByteArr);
             System.out.println("Message.ParseFrom Result : \r\n" + msg);
 
+            System.out.println(Message.MLOGINREQ_FIELD_NUMBER);
             System.out.println("===========================================================");
 
             // Test Field/Method
@@ -251,6 +298,60 @@ public class Reflection {
         return Arrays.stream(methods).map(Method::getName).collect(Collectors.toList());
     }
 
+    public byte[] createSendMsg(SendPhase sendPhase, String pkgBase) {
+        if (!pkgBase.endsWith(".")) {
+            pkgBase += ".";
+        }
+
+        // get Builder
+        Object msgBuilder = getNewBuilder(pkgBase + sendPhase.getClassName());
+
+        // set subMessages
+        for (MsgInfo msgInfo : sendPhase.getMsgInfos()) {
+            Object subMsgObj = getSubMessage(msgInfo, pkgBase);
+            if (subMsgObj == null) continue;
+            msgBuilder = invokeObjMethod(getMethodName(msgInfo.getClassName()), msgBuilder, subMsgObj);
+        }
+
+        // Build Message
+        Object msgResult = build(msgBuilder);
+        System.out.println("Result : \r\n" + msgResult);
+        return toByteArray(msgResult);
+    }
+
+    public Object getSubMessage(MsgInfo msgInfo, String pkgBase) {
+
+        try {
+            Object builder = getNewBuilder(pkgBase + msgInfo.getClassName());
+
+            List<FieldInfo> fieldInfos = msgInfo.getFieldInfos();
+
+            for (FieldInfo fieldInfo : fieldInfos) {
+                String methodName = getMethodName(fieldInfo.getName());
+                String type = fieldInfo.getType();
+                String value = fieldInfo.getValue();
+
+                if (type.equals("int")) {
+                    builder = invokeIntMethod(methodName, builder, Integer.parseInt(value));
+
+                } else {
+                    if (StringUtil.isNull(value)) {
+                        String exec = fieldInfo.getExec();
+                        value = getExecResult(exec);
+                        if (value == null) continue;
+                    }
+                    builder = invokeObjMethod(methodName, builder, value);
+                }
+            }
+
+            return build(builder);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 
 
 }

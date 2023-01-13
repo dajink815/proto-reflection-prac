@@ -1,0 +1,32 @@
+syntax = "proto3"; 
+
+package com.uangel; 
+
+option java_package = "com.uangel.rmq.message";
+option java_outer_classname = "RmqMsg";
+option java_multiple_files = true;
+
+message RmqHeader {
+  string type = 1;
+  string transactionId = 2;
+  string msgFrom = 3;
+  string timestamp = 4;
+  int32  reasonCode = 5;
+  string reason = 6;
+}
+
+message RmqMessage {
+  RmqHeader header = 1;
+  bytes body = 2;
+}
+
+message HeartbeatReq {
+  int32 cpu_usage = 1;
+  int32 memory_usage = 2;
+  int32 session_count = 3;
+}
+
+message HbReq {
+  int32 svc_status = 1;
+}
+

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scenario>
+    <send class="Message">
+        <header class="Header">
+            <field name="type" type="str" value="CALL_CLOSE_REQ"/>
+            <field name="tId" type="str" exec="java.util.UUID.randomUUID().toString()"/>
+            <field name="msgFrom" type="str" value="AI_AIWF"/>
+            <field name="reasonCode" type="int" value="0"/>
+            <field name="reason" type="str" value="success"/>
+            <field name="timestamp" type="str"
+                   exec="java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd HH:mm:ss.SSS&quot;))"/>
+        </header>
+        <body>
+            <field name="callID" value=""/>
+        </body>
+    </send>
+
+    <recv>
+
+
+    </recv>
+
+    <pause />
+
+</scenario>

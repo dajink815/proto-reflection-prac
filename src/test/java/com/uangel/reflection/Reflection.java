@@ -1,10 +1,15 @@
 package com.uangel.reflection;
 
 
+import com.google.gson.JsonElement;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.MessageOrBuilder;
+import com.google.protobuf.util.JsonFormat;
 import com.uangel.protobuf.Message;
 import model.msg.FieldInfo;
 import model.msg.MsgInfo;
 import scenario.phases.SendPhase;
+import util.JsonUtil;
 import util.ReflectionUtil;
 import util.StringUtil;
 
@@ -46,6 +51,20 @@ public class Reflection {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * @fn getClass
+     * @brief load Class Type from jar
+     * @param name 클래스 이름
+     * */
+    public Class<?> getClass(String name) {
+        try {
+            return classLoader.loadClass(name);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /**
@@ -189,6 +208,10 @@ public class Reflection {
         return "set" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
     }
 
+    public String getJsonElementName(String className) {
+        return className.substring(0, 1).toLowerCase() + className.substring(1);
+    }
+
     public String getExecResult(String execCmd) throws Exception {
         if (StringUtil.isNull(execCmd))
             return null;
@@ -271,6 +294,11 @@ public class Reflection {
             //Object obj = msgByteArr;        // msgByteObj.equals(obj) : true
             Object o = parseFrom(PKG_PATH_MESSAGE, msgByteArr);
             System.out.println("ByteToObject : \r\n" + o);
+            String json = buildProto(o);
+            System.out.println("PrettyJson : \r\n" + json);
+            String callId = JsonUtil.json2String(json, "callCloseReq", "callId").orElse("");
+            System.out.println("JsonUtil Result : " + callId);
+
             // 2-2. ProtoBuf Class Method (메시지 받은 쪽에서 파싱 잘 되는지 확인)
             Message msg = Message.parseFrom(msgByteArr);
             System.out.println("Message.ParseFrom Result : \r\n" + msg);
@@ -299,24 +327,69 @@ public class Reflection {
     }
 
     public byte[] createSendMsg(SendPhase sendPhase, String pkgBase) {
+        try {
+            if (!pkgBase.endsWith(".")) {
+                pkgBase += ".";
+            }
+
+            // get Builder
+            String msgClassName = pkgBase + sendPhase.getClassName();
+            Object msgBuilder = getNewBuilder(msgClassName);
+
+            // set subMessages
+            for (MsgInfo msgInfo : sendPhase.getMsgInfos()) {
+                Object subMsgObj = getSubMessage(msgInfo, pkgBase);
+                if (subMsgObj == null) continue;
+                msgBuilder = invokeObjMethod(getMethodName(msgInfo.getClassName()), msgBuilder, subMsgObj);
+            }
+
+            // Build Message
+            Object msgResult = build(msgBuilder);
+            System.out.println("Result : \r\n" + msgResult);
+            // send msg by RabbitMQ Server
+            byte[] msgByteArr = toByteArray(msgResult);
+
+            // 메시지 받았다고 가정하고 처리
+            processRecvMsg(msgByteArr, sendPhase, pkgBase);
+
+            return msgByteArr;
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public void processRecvMsg(byte[] msg, SendPhase sendPhase, String pkgBase) throws InvalidProtocolBufferException {
+
         if (!pkgBase.endsWith(".")) {
             pkgBase += ".";
         }
+        String className = pkgBase + sendPhase.getClassName();
 
-        // get Builder
-        Object msgBuilder = getNewBuilder(pkgBase + sendPhase.getClassName());
+        // 1. Byte -> Object
+        Object msgObj = parseFrom(className, msg);
+        System.out.println("ByteToObject : \r\n" + msgObj);
 
-        // set subMessages
-        for (MsgInfo msgInfo : sendPhase.getMsgInfos()) {
-            Object subMsgObj = getSubMessage(msgInfo, pkgBase);
-            if (subMsgObj == null) continue;
-            msgBuilder = invokeObjMethod(getMethodName(msgInfo.getClassName()), msgBuilder, subMsgObj);
+        // 2. Object -> Pretty Json
+        String json = buildProto(msgObj);
+        System.out.println("PrettyJson : \r\n" + json);
+
+        // 3. Parse KeyWord
+        String keyWord = "callId";
+        String callId = parseKeyWord(sendPhase.getMsgInfos(), json, keyWord);
+        System.out.println("JsonUtil Result : " + callId);
+
+    }
+
+    public String parseKeyWord(List<MsgInfo> msgInfos, String json, String keyWord) {
+        String value = null;
+        for (MsgInfo msgInfo : msgInfos) {
+            String elementName = getJsonElementName(msgInfo.getClassName());
+            value = JsonUtil.json2String(json, elementName, keyWord).orElse("");
+            System.out.println("ElementName : " + elementName + ", value : " + value);
+            if (StringUtil.notNull(value)) break;
         }
-
-        // Build Message
-        Object msgResult = build(msgBuilder);
-        System.out.println("Result : \r\n" + msgResult);
-        return toByteArray(msgResult);
+        return value;
     }
 
     public Object getSubMessage(MsgInfo msgInfo, String pkgBase) {
@@ -351,6 +424,11 @@ public class Reflection {
         }
 
         return null;
+    }
+
+    // Object -> JSON
+    public static String buildProto(Object obj) throws InvalidProtocolBufferException {
+        return JsonFormat.printer().includingDefaultValueFields().print((MessageOrBuilder) obj);
     }
 
 

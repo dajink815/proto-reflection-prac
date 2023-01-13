@@ -1,67 +1,184 @@
 /*
- * Copyright (C) 2019. Uangel Corp. All rights reserved.
- *
+ * Copyright (C) 2021. Uangel Corp. All rights reserved.
  */
 
 package util;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.google.gson.*;
 
-import java.lang.reflect.Type;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * @author dajin kim
- */
 public class JsonUtil {
 
     private JsonUtil() {
-        // nothing
     }
 
-    // JSON -> ClassType Object
-    public static <T> T parse(String json, Type classType) {
+    public static Optional<JsonObject> json2Object(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsJsonObject);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<JsonArray> json2Array(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsJsonArray);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<JsonPrimitive> json2Primitive(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsJsonPrimitive);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<JsonNull> json2Null(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsJsonNull);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<Boolean> json2Boolean(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsBoolean);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<Number> json2Number(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsNumber);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<String> json2String(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsString);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<Double> json2Double(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsDouble);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<Float> json2Float(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsFloat);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<Long> json2Long(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsLong);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<Integer> json2Int(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsInt);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<Byte> json2Byte(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsByte);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<BigDecimal> json2BigDecimal(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsBigDecimal);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<BigInteger> json2BigInteger(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsBigInteger);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<Short> json2Short(String jsonStr, String... elements) {
+        try {
+            return json2JsonElement(jsonStr, elements)
+                    .map(JsonElement::getAsShort);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public static boolean isJson(String msg) {
+        if (!msg.contains("{")) return false;
         Gson gson = new Gson();
-        return gson.fromJson(json, classType);
+        try {
+            gson.fromJson(msg, Object.class);
+            return true;
+        } catch (JsonSyntaxException ex) {
+            return false;
+        }
     }
 
-    // JsonElement -> ClassType Object
-    public static <T> T parse(JsonElement json, Class<T> classType) {
-        Gson gson = new Gson();
-        return gson.fromJson(json, classType);
+    public static Optional<JsonElement> json2JsonElement(String jsonStr, String... element) {
+        Optional<JsonObject> optionalJsonObject = Optional.ofNullable(new Gson().fromJson(jsonStr, JsonObject.class));
+        for (AtomicInteger i = new AtomicInteger(); i.get() < element.length - 1; i.getAndIncrement()) {
+            optionalJsonObject = optionalJsonObject.map(o -> o.get(element[i.get()]))
+                    .map(JsonElement::getAsJsonObject);
+        }
+        return optionalJsonObject.map(o -> o.get(element[element.length - 1]));
     }
 
-    // Object -> JSON
-    public static String build(Object obj) {
-        Gson gson = new Gson();
-        return gson.toJson(obj);
-    }
-
-    // Object -> Pretty JSON
-    public static String buildPretty(Object obj) {
+    public static String toPrettyJson(String json) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        return gson.toJson(obj);
+        JsonElement je = JsonParser.parseString(json);
+        return gson.toJson(je);
     }
 
-    // String -> Pretty JSON
-    public static String buildPretty(String json) {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        return gson.toJson(JsonParser.parseString(json));
+    public static String toJson(Object object) {
+        return new Gson().toJson(object);
     }
-
-    // String -> JsonElement
-    public static JsonElement build(String json) {
-        Gson gson = new Gson();
-        return gson.toJsonTree(json);
-    }
-
-    // Object -> JsonElement
-    public static JsonElement build(Object obj, Type objType) {
-        Gson gson = new GsonBuilder().create();
-        return gson.toJsonTree(obj, objType);
-    }
-
-
 }

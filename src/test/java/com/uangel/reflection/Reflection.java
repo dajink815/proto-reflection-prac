@@ -26,8 +26,8 @@ public class Reflection {
 
     /**
      * @fn loadJarFile
-     *
-     *
+     * @brief load Jar File
+     * @param jarFilePath jar 파일 경로
      * */
     public void loadJarFile(String jarFilePath) {
         File jarFile = new File(jarFilePath);
@@ -42,8 +42,8 @@ public class Reflection {
 
     /**
      * @fn getClassObject
-     *
-     *
+     * @brief load Class from jar & Create Object
+     * @param name 객체를 생성할 클래스 이름
      * */
     public Object getClassObject(String name) {
         try {
@@ -60,33 +60,37 @@ public class Reflection {
     /**
      * @fn invokeMethod
      * @brief invoke method without Parameter
-     * @param c 메서드가 있는 클래스
      * @param methodName 실행할 메서드 이름
      * @param obj 메서드가 있는 클래스 인스턴스
      *            클래스를 "new"로 생성하거나, "newInstance()"로 생성된 Object
      * */
-    public Object invokeMethod(Class<?> c, String methodName, Object obj) {
+    public Object invokeMethod(String methodName, Object obj) {
         try {
             // 매개 변수 없는 메소드 호출 및 실행
-            Method method = c.getMethod(methodName);
+            Method method = obj.getClass().getMethod(methodName);
             return method.invoke(obj);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
-    public Object invokeMethod(String methodName, Object obj) {
-        return invokeMethod(obj.getClass(), methodName, obj);
-    }
     public Object invokeMethod(String className, String methodName) {
         Object obj = getClassObject(className);
-        return invokeMethod(obj.getClass(), methodName, obj);
+        return invokeMethod(methodName, obj);
     }
 
-    private Object invokeMethodWparam(Class<?> c, String methodName, Object obj, Object parameter, Class<?> paramType) {
+    /**
+     * @fn invokeMethodWparam
+     * @brief invoke method with Parameter
+     * @param methodName 실행할 메서드 이름
+     * @param obj 메서드가 있는 클래스의 객체
+     * @param parameter 메서드 실행에 필요한 매개 변수
+     * @param paramType 매개 변수의 타입
+     * */
+    private Object invokeMethodWparam(String methodName, Object obj, Object parameter, Class<?> paramType) {
         try {
             // paramType 매개 변수 있는 methodName 이름의 메소드 호출
-            Method method = c.getMethod(methodName, paramType);
+            Method method = obj.getClass().getMethod(methodName, paramType);
             // 호출한 메소드 실행 with parameter
             return method.invoke(obj, parameter);
         } catch (Exception e) {
@@ -97,69 +101,52 @@ public class Reflection {
     /**
      * @fn invokeStrMethod
      * @brief invoke method with String Parameter
-     * @param c 메서드가 있는 클래스
      * @param methodName 실행할 메서드 이름
      * @param obj 메서드가 있는 클래스의 객체
      * @param parameter 메서드 실행에 필요한 String 타입 매개 변수
      * */
-    public Object invokeStrMethod(Class<?> c, String methodName, Object obj, String parameter) {
-        // String 타입의 매개 변수 있는 methodName 이름의 메소드 호출, 실행
-        return invokeMethodWparam(c, methodName, obj, parameter, String.class);
-    }
     public Object invokeStrMethod(String methodName, Object obj, String parameter) {
-        return invokeMethodWparam(obj.getClass(), methodName, obj, parameter, String.class);
+        // String 타입의 매개 변수 있는 methodName 이름의 메소드 호출, 실행
+        return invokeMethodWparam(methodName, obj, parameter, String.class);
     }
 
     /**
      * @fn invokeIntMethod
      * @brief invoke method with int Parameter
-     * @param c 메서드가 있는 클래스
      * @param methodName 실행할 메서드 이름
      * @param obj 메서드가 있는 클래스의 객체
      * @param parameter 메서드 실행에 필요한 int 타입 매개 변수
      * */
-    public Object invokeIntMethod(Class<?> c, String methodName, Object obj, int parameter) {
+    public Object invokeIntMethod(String methodName, Object obj, int parameter) {
         // int 타입의 매개 변수 있는 methodName 이름의 메소드 호출
         // 호출한 메소드 실행 with int parameter
-        return invokeMethodWparam(c, methodName, obj, parameter, int.class);
-    }
-    public Object invokeIntMethod(String methodName, Object obj, int parameter) {
-        return invokeMethodWparam(obj.getClass(), methodName, obj, parameter, int.class);
+        return invokeMethodWparam(methodName, obj, parameter, int.class);
     }
 
     /**
      * @fn invokeByteMethod
      * @brief invoke method with Byte Array Parameter
-     * @param c 메서드가 있는 클래스
+     * @param className 메서드가 있는 클래스 이름
      * @param methodName 실행할 메서드 이름
-     * @param obj 메서드가 있는 클래스의 객체
      * @param parameter 메서드 실행에 필요한 Byte Array 타입(Object 로 전달) 매개 변수
      * */
-    public Object invokeByteMethod(Class<?> c, String methodName, Object obj, Object parameter) {
-        // byte[] 타입의 매개 변수 있는 methodName 이름의 메소드 호출
-        return invokeMethodWparam(c, methodName, obj, parameter, byte[].class);
-
-    }
     public Object invokeByteMethod(String className, String methodName, Object parameter) {
         Object obj = getClassObject(className);
-        return invokeMethodWparam(obj.getClass(), methodName, obj, parameter, byte[].class);
+        // byte[] 타입의 매개 변수 있는 methodName 이름의 메소드 호출
+        return invokeMethodWparam(methodName, obj, parameter, byte[].class);
     }
 
     /**
      * @fn invokeObjMethod
      * @brief invoke method with Object Parameter
-     * @param c 메서드가 있는 클래스
      * @param methodName 실행할 메서드 이름
      * @param obj 메서드가 있는 클래스의 객체
      * @param parameter 메서드 실행에 필요한 Object 타입 매개 변수
      * */
-    public Object invokeObjMethod(Class<?> c, String methodName, Object obj, Object parameter) {
+    public Object invokeObjMethod(String methodName, Object obj, Object parameter) {
         // parameter.class 타입의 매개 변수 있는 methodName 이름의 메소드 호출
         // 호출한 메소드 실행 with object parameter
-        return invokeMethodWparam(c, methodName, obj, parameter, parameter.getClass());
-    }
-    public Object invokeObjMethod(String methodName, Object obj, Object parameter) {
-        return invokeMethodWparam(obj.getClass(), methodName, obj, parameter, parameter.getClass());
+        return invokeMethodWparam(methodName, obj, parameter, parameter.getClass());
     }
 
     /**
@@ -173,19 +160,19 @@ public class Reflection {
             Object hBuilderObj = invokeMethod("com.uangel.protobuf.Header", "newBuilder");
 
             // set Header
-            hBuilderObj = invokeStrMethod("setType", hBuilderObj, "CALL_CLOSER_REQ");
+            hBuilderObj = invokeObjMethod("setType", hBuilderObj, "CALL_CLOSER_REQ");
 
             String execCmd = "java.util.UUID.randomUUID().toString()";
             String value = ReflectionUtil.exec(execCmd).value.toString();
-            hBuilderObj = invokeStrMethod("setTId", hBuilderObj, value);
+            hBuilderObj = invokeObjMethod("setTId", hBuilderObj, value);
 
-            hBuilderObj = invokeStrMethod("setMsgFrom", hBuilderObj, "AI_AIWF");
-            hBuilderObj = invokeStrMethod("setReason", hBuilderObj, "success");
+            hBuilderObj = invokeObjMethod("setMsgFrom", hBuilderObj, "AI_AIWF");
+            hBuilderObj = invokeObjMethod("setReason", hBuilderObj, "success");
             hBuilderObj = invokeIntMethod("setReasonCode", hBuilderObj, 200);
 
             execCmd = "java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern(\"yyyy-MM-dd HH:mm:ss.SSS\"))";
             value = ReflectionUtil.exec(execCmd).value.toString();
-            hBuilderObj = invokeStrMethod("setTimestamp", hBuilderObj, value);
+            hBuilderObj = invokeObjMethod("setTimestamp", hBuilderObj, value);
 
             // Build Header
             Object hBuildResultObj = invokeMethod("build", hBuilderObj);
@@ -200,7 +187,7 @@ public class Reflection {
             Object bBuilderObj = invokeMethod("com.uangel.protobuf.CallCloseReq", "newBuilder");
 
             // set Body
-            bBuilderObj = invokeStrMethod("setCallId", bBuilderObj, "testCallId");
+            bBuilderObj = invokeObjMethod("setCallId", bBuilderObj, "testCallId");
 
             // Build Body
             Object bBuildResultObj = invokeMethod("build", bBuilderObj);
@@ -238,10 +225,7 @@ public class Reflection {
             //Object obj = msgByteArr;        // msgByteObj.equals(obj) : true
             Object o = invokeByteMethod("com.uangel.protobuf.Message", "parseFrom", msgByteArr);
             System.out.println("ByteToObject : \r\n" + o);
-            // 2-2. Reflection
-            //Object m = invokeByteMethod("parseFrom", msgBuildResultObj, msgByteObj);
-            //System.out.println("Reflection ParseFrom Result : \r\n" + m);
-            // 2-3. ProtoBuf Class Method (메시지 받은 쪽에서 파싱 잘 되는지 확인)
+            // 2-2. ProtoBuf Class Method (메시지 받은 쪽에서 파싱 잘 되는지 확인)
             Message msg = Message.parseFrom(msgByteArr);
             System.out.println("Message.ParseFrom Result : \r\n" + msg);
 

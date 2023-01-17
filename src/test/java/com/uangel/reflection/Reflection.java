@@ -1,15 +1,18 @@
 package com.uangel.reflection;
 
 
-import com.google.gson.JsonElement;
+import com.google.protobuf.Descriptors;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
+import com.uangel.keyword.TestKeywordMapper;
+import com.uangel.protobuf.MediaStartRes;
 import com.uangel.protobuf.Message;
 import model.msg.FieldInfo;
 import model.msg.MsgInfo;
 import scenario.phases.SendPhase;
 import util.JsonUtil;
+import util.ProtoUtil;
 import util.ReflectionUtil;
 import util.StringUtil;
 
@@ -20,7 +23,9 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -31,7 +36,7 @@ public class Reflection {
     private URLClassLoader classLoader;
     private static final String PKG_BASE = "com.uangel.protobuf.";
     private static final String PKG_PATH_HEADER = PKG_BASE + "Header";
-    private static final String PKG_PATH_BODY = PKG_BASE + "CallCloseReq";
+    private static final String PKG_PATH_BODY = PKG_BASE + "MediaStartRes";
     private static final String PKG_PATH_MESSAGE = PKG_BASE + "Message";
 
     public Reflection() {
@@ -200,6 +205,10 @@ public class Reflection {
         return invokeMethod("build", builderObj);
     }
 
+    public Object getAllFields(Object msgObj) {
+        return invokeMethod("getAllFields", msgObj);
+    }
+
     public Object parseFrom(String className, byte[] bytes) {
         return invokeByteMethod(className, "parseFrom", bytes);
     }
@@ -234,7 +243,7 @@ public class Reflection {
             Object hBuilder = getNewBuilder(PKG_PATH_HEADER);
 
             // set Header
-            hBuilder = invokeObjMethod("setType", hBuilder, "CALL_CLOSER_REQ");
+            hBuilder = invokeObjMethod("setType", hBuilder, "MEDIA_START_RES");
 
             String value = getExecResult("java.util.UUID.randomUUID().toString()");
             hBuilder = invokeObjMethod("setTId", hBuilder, value);
@@ -260,6 +269,8 @@ public class Reflection {
 
             // set Body
             bBuilder = invokeObjMethod("setCallId", bBuilder, "testCallId");
+            bBuilder = invokeObjMethod("setRtpIp", bBuilder, "127.0.0.1");
+            bBuilder = invokeIntMethod("setRtpPort", bBuilder, 5070);
 
             // Build Body
             Object bMsgResult = build(bBuilder);
@@ -276,7 +287,7 @@ public class Reflection {
             // set Header
             msgBuilder = invokeObjMethod("setHeader", msgBuilder, hMsgResult);
             // set Body
-            msgBuilder = invokeObjMethod("setCallCloseReq", msgBuilder, bMsgResult);
+            msgBuilder = invokeObjMethod("setMediaStartRes", msgBuilder, bMsgResult);
 
             // Build Message
             Object msgResult = build(msgBuilder);
@@ -296,12 +307,20 @@ public class Reflection {
             System.out.println("ByteToObject : \r\n" + o);
             String json = buildProto(o);
             System.out.println("PrettyJson : \r\n" + json);
-            String callId = JsonUtil.json2String(json, "callCloseReq", "callId").orElse("");
+            String callId = JsonUtil.json2String(json, "mediaStartRes", "callId").orElse("");
             System.out.println("JsonUtil Result : " + callId);
+
+            System.out.println("===========================================================");
 
             // 2-2. ProtoBuf Class Method (메시지 받은 쪽에서 파싱 잘 되는지 확인)
             Message msg = Message.parseFrom(msgByteArr);
+            MediaStartRes bodyMsg = msg.getMediaStartRes();
             System.out.println("Message.ParseFrom Result : \r\n" + msg);
+            System.out.println("Message.ParseFrom BodyMsg : \r\n" + bodyMsg);
+
+            System.out.println("getCallId : " + bodyMsg.getCallId());
+            System.out.println("AllFields : " + bodyMsg.getAllFields());
+            System.out.println("Msg AllFields : " + msg.getAllFields());
 
             System.out.println(Message.MLOGINREQ_FIELD_NUMBER);
             System.out.println("===========================================================");
@@ -376,8 +395,13 @@ public class Reflection {
 
         // 3. Parse KeyWord
         String keyWord = "callId";
-        String callId = parseKeyWord(sendPhase.getMsgInfos(), json, keyWord);
-        System.out.println("JsonUtil Result : " + callId);
+/*        String callId = parseKeyWord(sendPhase.getMsgInfos(), json, keyWord);
+        System.out.println("JsonUtil Result : " + callId);*/
+
+        // 4. Parse All Fields
+        Map<String, String> a = getAllFieldsMap(msgObj);
+        System.out.println(a);
+        System.out.println(a.get(keyWord));
 
     }
 
@@ -413,6 +437,8 @@ public class Reflection {
                         value = getExecResult(exec);
                         if (value == null) continue;
                     }
+                    TestKeywordMapper keywordMapper = new TestKeywordMapper();
+                    value = keywordMapper.replaceKeyword(value);
                     builder = invokeObjMethod(methodName, builder, value);
                 }
             }
@@ -429,6 +455,17 @@ public class Reflection {
     // Object -> JSON
     public static String buildProto(Object obj) throws InvalidProtocolBufferException {
         return JsonFormat.printer().includingDefaultValueFields().print((MessageOrBuilder) obj);
+    }
+
+    public Map<String, String> getAllFieldsMap(Object msgObj) throws InvalidProtocolBufferException {
+        Map<Descriptors.FieldDescriptor, Object> fields = (Map<Descriptors.FieldDescriptor, Object>) getAllFields(msgObj);
+
+        Map<String, String> result = new HashMap<>();
+        for (Object value : fields.values()) {
+            Map<String, String> valueMap = ProtoUtil.parse(buildProto(value), HashMap.class);
+            result.putAll(valueMap);
+        }
+        return result;
     }
 
 

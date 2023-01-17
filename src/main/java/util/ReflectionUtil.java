@@ -25,6 +25,8 @@ public class ReflectionUtil {
 
         System.out.println(exec("java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern(\"yyyy-MM-dd HH:mm:ss.SSS\"))"));
         System.out.println(exec("java.util.UUID.randomUUID().toString()"));
+        System.out.println(exec("lib.java.handler.sip.Utils.getInstance()"));
+        System.out.println(exec("lib.java.handler.sip.Utils.getInstance().generateCallIdentifier(\"127.0.0.1\")"));
     }
 
     public static TypeValuePair exec(String expression) throws Exception {

@@ -28,6 +28,13 @@ public class ProtoUtil {
         return gson.fromJson(json, classType);
     }
 
+    // Object -> Pretty JSON
+    public static String buildPretty(Object obj) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        return gson.toJson(obj);
+    }
+
+    // JSON -> Pretty JSON
     public static String buildPretty(String json) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         return gson.toJson(JsonParser.parseString(json));

@@ -75,4 +75,27 @@ public class TestReflection {
         return sendPhase;
     }
 
+    @Test
+    public void defineExecCmdTest() throws Exception {
+        Map<String, String> execCmdMap = new HashMap<>();
+        execCmdMap.put("tId", "java.util.UUID.randomUUID().toString()");
+        execCmdMap.put("timestamp", "java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern(\"yyyy-MM-dd HH:mm:ss.SSS\"))");
+
+        String keyWord = "[timestamp]";
+
+        Matcher m = keyPattern.matcher(keyWord);
+        if (m.find()) {
+            System.out.println(m);
+            System.out.println(m.group());
+            System.out.println(m.group(1));
+
+            if (execCmdMap.containsKey(m.group(1))) {
+                String cmd = execCmdMap.get(m.group(1));
+                util.ReflectionUtil.TypeValuePair result = util.ReflectionUtil.exec(cmd);
+                System.out.println(result.value);
+            }
+        }
+
+    }
+
 }
